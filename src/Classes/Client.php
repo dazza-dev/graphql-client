@@ -8,7 +8,8 @@ use BendeckDavid\GraphqlClient\Enums\Format;
 use BendeckDavid\GraphqlClient\Enums\Request;
 use BendeckDavid\GraphqlClient\Classes\Mutator;
 
-class Client extends Mutator {
+class Client extends Mutator
+{
 
     private string $query;
     public string $queryType;
@@ -22,10 +23,7 @@ class Client extends Mutator {
 
     public function __construct(
         protected string|null $endpoint
-    )
-    {
-
-    }
+    ) {}
 
     /**
      * Generate the Graphql query in raw format
@@ -34,7 +32,7 @@ class Client extends Mutator {
      */
     public function getRawQueryAttribute()
     {
-        $content = match($this->queryType){
+        $content = match ($this->queryType) {
             Request::RAW => $this->query,
             DEFAULT => "{$this->queryType} {{$this->query}}"
         };
@@ -77,8 +75,11 @@ class Client extends Mutator {
 
         // fill Authentication header
         $authToken = isset($this->token) ? $this->token : config('graphqlclient.auth_credentials');
-        data_fill($this->rawHeaders, config('graphqlclient.auth_header'),
-            config('graphqlclient.auth_schemes')[$auth_scheme].$authToken);
+        data_fill(
+            $this->rawHeaders,
+            config('graphqlclient.auth_header'),
+            config('graphqlclient.auth_schemes')[$auth_scheme] . $authToken
+        );
     }
 
 
@@ -90,7 +91,7 @@ class Client extends Mutator {
     public function getHeadersAttribute()
     {
         // Include Authentication
-        if(config('graphqlclient.auth_credentials') || isset($this->token)) {
+        if (config('graphqlclient.auth_credentials') || isset($this->token)) {
             $this->includeAuthentication();
         }
 
@@ -228,13 +229,19 @@ class Client extends Mutator {
             if ($format == Format::JSON) {
                 $response = json_decode($result, false);
                 if ($rawResponse) return $response;
-                return $response->data;
+                $data = $response->data;
             } else {
                 $response = json_decode($result, true);
                 if ($rawResponse) return $response;
-                return Arr::get($response, "data");
+                $data = Arr::get($response, 'data');
             }
 
+            // Check if the response is valid
+            if (!$data) {
+                throw new Exception('Invalid response from server: ' . $result);
+            }
+
+            return $data;
         } catch (\Throwable $th) {
             throw $th;
         }
@@ -262,5 +269,4 @@ class Client extends Mutator {
     {
         return $this->makeRequest($format, true);
     }
-
 }

@@ -20,6 +20,7 @@ class Client extends Mutator
         'User-Agent' => 'Laravel GraphQL client',
     ];
     public array $context = [];
+    private $shouldUseNumericCheck = true;
 
     public function __construct(
         protected string|null $endpoint
@@ -42,6 +43,16 @@ class Client extends Mutator
         GRAPHQL;
     }
 
+    /**
+     * Disable Numeric Check
+     * 
+     */
+    public function disableNumericCheck(): self
+    {
+        $this->shouldUseNumericCheck = false;
+
+        return $this;
+    }
 
     /**
      * Build the HTTP request
@@ -53,12 +64,22 @@ class Client extends Mutator
         return stream_context_create(array_merge([
             'http' => [
                 'method'  => 'POST',
-                'content' => json_encode(['query' => $this->raw_query, 'variables' => $this->variables], JSON_NUMERIC_CHECK),
+                'content' => $this->buildJsonContent(),
                 'header'  => $this->headers,
             ]
         ], $this->context));
     }
 
+    /**
+     * Json Content
+     *
+     */
+    private function buildJsonContent(): string
+    {
+        $options = $this->shouldUseNumericCheck ? JSON_NUMERIC_CHECK : 0;
+
+        return json_encode(['query' => $this->raw_query, 'variables' => $this->variables], $options);
+    }
 
     /**
      * Include authentication headers
@@ -81,7 +102,6 @@ class Client extends Mutator
             config('graphqlclient.auth_schemes')[$auth_scheme] . $authToken
         );
     }
-
 
     /**
      * Return Client headers formatted
